@@ -182,3 +182,47 @@ $('mailForm').addEventListener('submit', async (e) => {
     btn.disabled = false; btn.textContent = 'Enviar pase por correo';
   }
 });
+
+/* ===== ositos distribuidos en el fondo de la invitación ===== */
+(function(){
+  const inner = document.querySelector('#invite .inner');
+  if(!inner) return;
+
+  const layer = document.createElement('div');
+  layer.className = 'bears';
+  layer.setAttribute('aria-hidden','true');
+  inner.prepend(layer);
+
+  function paint(){
+    const w = inner.clientWidth, h = inner.clientHeight;
+    if(!w || !h) return;
+    layer.innerHTML = '';
+
+    const size = w > 480 ? 66 : 58;
+    const cols = Math.max(3, Math.round(w / 105));   // ositos por fila
+    const stepX = w / cols;
+    const stepY = stepX * 0.95;                      // separación vertical
+    const rows = Math.ceil(h / stepY) + 1;
+    const tilts = [-12, 8, -6, 14, -10, 6];          // inclinaciones variadas
+
+    for(let r = 0; r < rows; r++){
+      for(let c = 0; c <= cols; c++){
+        const offset = (r % 2) ? 0.5 : 0;            // fila alternada
+        const x = (c + offset) * stepX - size / 2 + stepX / 2 - stepX / 2;
+        const y = r * stepY - size / 4;
+        const img = document.createElement('img');
+        img.src = 'osito_contorno.png';
+        img.alt = '';
+        img.loading = 'lazy';
+        img.style.left = x + 'px';
+        img.style.top = y + 'px';
+        img.style.transform = 'rotate(' + tilts[(r * 3 + c) % tilts.length] + 'deg)';
+        layer.appendChild(img);
+      }
+    }
+  }
+
+  // Se recalcula al abrir la invitación, al rotar el teléfono o al aparecer el pase
+  new ResizeObserver(paint).observe(inner);
+  paint();
+})();
