@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<title>Control de acceso · Baby Shower</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500&family=Great+Vibes&family=Montserrat:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --cream:#F7EFE2; --mist:#E5EDF0; --sea:#9FADB6; --dusty:#7191AA; --sand:#DDCDBD; --ink:#4a5a66;
+  --ok:#4C7C62; --bad:#A2544C;
+  --script:'Great Vibes',cursive; --serif:'Cormorant Garamond',Georgia,serif; --sans:'Montserrat',system-ui,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{min-height:100%}
+body{background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:1rem;line-height:1.5;
+  padding:max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
+main{width:min(100%,400px);margin:0 auto;display:grid;gap:1.25rem}
+
+header{text-align:center}
+header .script{display:block;font-family:var(--script);font-size:2.8rem;line-height:1.1;color:var(--dusty)}
+header p{font-family:var(--serif);font-size:1.25rem;font-weight:600;color:var(--ink)}
+
+/* PIN */
+.pin{display:grid;gap:.35rem}
+.pin label{font-size:.85rem;font-weight:500;color:var(--dusty)}
+.pin input,.manual input{width:100%;padding:.8rem 1rem;border:1.5px solid var(--sea);border-radius:10px;background:#fffaf1;
+  font:inherit;font-size:1.1rem;color:var(--ink)}
+.pin input{letter-spacing:.3em}
+input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--dusty);outline-offset:2px}
+
+/* cámara: marco en arco, igual que la portada de la invitación */
+.scan{position:relative;width:min(100%,340px);aspect-ratio:1;margin:0 auto;background:var(--mist);
+  border:2px solid var(--sea);outline:1px solid var(--sea);outline-offset:6px;border-radius:999px 999px 18px 18px;overflow:hidden}
+#reader{width:100%;height:100%;border:0!important}
+#reader video{width:100%!important;height:100%!important;object-fit:cover}
+.scan .hint{position:absolute;inset:auto 0 1rem;text-align:center;font-size:.85rem;color:var(--ink);pointer-events:none}
+
+/* resultado: lo importante a simple vista */
+#res{display:grid;justify-items:center;gap:.25rem;text-align:center;padding:1.4rem 1rem 1.5rem;border-radius:18px;
+  background:var(--mist);color:var(--ink);border:1.5px solid var(--sea);min-height:11.5rem;align-content:center;transition:background .2s,color .2s}
+#res svg{width:46px;height:46px;margin-bottom:.2rem}
+#res .t{font-size:.95rem;font-weight:600}
+#res .n{font-family:var(--serif);font-size:2.1rem;line-height:1.1;font-weight:600;overflow-wrap:anywhere}
+#res .d{font-size:.95rem}
+#res[data-s="ok"]{background:var(--ok);border-color:var(--ok);color:#fff}
+#res[data-s="bad"]{background:var(--bad);border-color:var(--bad);color:#fff}
+#res.pop{animation:pop .28s ease-out}
+@keyframes pop{from{transform:scale(.97);opacity:.6}to{transform:none;opacity:1}}
+
+/* validar sin cámara */
+.manual summary{cursor:pointer;color:var(--dusty);font-size:.9rem;font-weight:500;text-align:center;padding:.4rem}
+.manual .row{display:flex;gap:.5rem;margin-top:.6rem}
+.manual input{text-transform:uppercase;letter-spacing:.08em}
+.manual button{flex:none;padding:0 1.2rem;border:0;border-radius:10px;background:var(--dusty);color:#fff;font:inherit;font-weight:500;cursor:pointer}
+.manual button:hover{background:var(--ink)}
+
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <span class="script">Roberto Odiseo</span>
+    <p>Control de acceso</p>
+  </header>
+
+  <div class="pin">
+    <label for="pin">PIN del staff</label>
+    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
+  </div>
+
+  <div class="scan">
+    <div id="reader"></div>
+    <p class="hint" id="hint">Apunta la cámara al QR del pase</p>
+  </div>
+
+  <section id="res" data-s="idle" role="status" aria-live="assertive"></section>
+
+  <details class="manual">
+    <summary>Validar escribiendo el código</summary>
+    <div class="row">
+      <input id="manual" type="text" placeholder="RO-XXXXXX" aria-label="Código del pase" autocapitalize="characters" autocomplete="off">
+      <button id="manualBtn" type="button">Validar</button>
+    </div>
+  </details>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
+<script>
+const URL_API = 'https://script.google.com/macros/s/AKfycbzZCH8U14MRa4vER-owVHN8S0RnAE5VszrfFZvlFjPZG6uCdWfhUOHxI1kFX86Nrnlj/exec';
+const $ = (id) => document.getElementById(id);
+const res = $('res');
+let busy = false;
+
+const ICONS = {
+  ok:   '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M15 25l6 6 12-13"/></svg>',
+  bad:  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M17 17l14 14M31 17L17 31"/></svg>',
+  idle: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V8h9M33 8h9v9M42 31v9h-9M15 40H6v-9M16 24h16"/></svg>'
+};
+
+// Dibuja el resultado con textContent (los nombres vienen de la hoja, no se inserta HTML)
+function setState(s, title, name = '', detail = '') {
+  res.dataset.s = s;
+  res.innerHTML = ICONS[s === 'load' ? 'idle' : s];
+  [['t', title], ['n', name], ['d', detail]].forEach(([c, txt]) => {
+    if (!txt) return;
+    const p = document.createElement('p'); p.className = c; p.textContent = txt; res.appendChild(p);
+  });
+  res.classList.remove('pop'); void res.offsetWidth; res.classList.add('pop');
+}
+
+function fechaLegible(txt) {
+  const d = new Date(txt);
+  return isNaN(d) ? txt : d.toLocaleString('es-MX', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+function rechazo(error) {
+  const m = /^YA FUE USADO el (.+)$/i.exec(error || '');
+  if (m) return setState('bad', 'Pase ya utilizado', '', 'Registrado el ' + fechaLegible(m[1]));
+  setState('bad', error === 'PIN incorrecto' ? 'PIN incorrecto' : 'Pase no válido', '', error === 'PIN incorrecto' ? 'Revisa el PIN e inténtalo de nuevo.' : (error || ''));
+}
+
+async function validar(codigo) {
+  if (busy) return;
+  const pin = $('pin').value;
+  if (!pin) { setState('bad', 'Falta el PIN', '', 'Escribe el PIN del staff para validar.'); $('pin').focus(); return; }
+  busy = true;
+  setState('load', 'Validando…');
+  try {
+    const r = await fetch(URL_API, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({ accion: 'validar', codigo, pin })
+    });
+    const o = await r.json();
+    if (o.ok) {
+      setState('ok', 'Pase válido', o.nombre, o.pases + (Number(o.pases) === 1 ? ' pase' : ' pases'));
+      navigator.vibrate && navigator.vibrate(80);
+    } else {
+      rechazo(o.error);
+      navigator.vibrate && navigator.vibrate([120, 60, 120]);
+    }
+  } catch {
+    setState('bad', 'Sin conexión', '', 'No se pudo consultar la lista. Revisa el internet e inténtalo de nuevo.');
+  }
+  setTimeout(() => busy = false, 2500); // pausa antes del siguiente escaneo
+}
+
+function onScan(text) {
+  if (busy) return;
+  const parts = text.split('|');
+  if (parts[0] !== 'BABYSHOWER-RO') return setState('bad', 'QR no válido', '', 'Este código no es de la invitación.');
+  validar(parts[1]);
+}
+
+$('manualBtn').addEventListener('click', () => {
+  const c = $('manual').value.trim().toUpperCase();
+  if (c) validar(c);
+});
+$('manual').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('manualBtn').click(); });
+
+setState('idle', 'Listo para escanear', '', 'El resultado aparecerá aquí.');
+
+new Html5Qrcode('reader')
+  .start({ facingMode: 'environment' }, { fps: 10, qrbox: 220, aspectRatio: 1 }, onScan)
+  .catch(() => {
+    $('hint').hidden = true;
+    setState('bad', 'No se pudo abrir la cámara', '', 'Usa HTTPS, da permiso de cámara o valida escribiendo el código.');
+  });
+</script>
+</body>
+</html>
