@@ -126,3 +126,11 @@ form .btn{justify-self:center;margin-top:.3rem}
   #pass{position:absolute;left:50%;top:1.5cm;transform:translateX(-50%);width:11cm;box-shadow:none}
   body{background:none}body::before{display:none}
 }
+
+/* ===== ositos de fondo en la invitación ===== */
+.inner{position:relative;isolation:isolate}
+.inner > *:not(.bears){position:relative;z-index:1}
+.bears{position:absolute!important;inset:0;z-index:0!important;overflow:hidden;pointer-events:none}
+.bears img{position:absolute;width:58px;height:auto;opacity:.16;user-select:none}
+@media (min-width:600px){.bears img{width:66px}}
+@media print{.bears{display:none}}
