@@ -1,6 +1,6 @@
 /* ============ CONFIGURACIÓN ============ */
 // Pega aquí la URL de tu Web App de Google Apps Script (termina en /exec) nuevo
-const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxw9gNisaXwv1faFIzk3WMmsYe-Xlz62z4f4EbVVBhSq-dcU2cEAoO_-SK5kT2p-4zb/exec';
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbyuxZY8OuN3RZ25py2YAGK2Zjshnxu7hNXqBC_S-vra7wwihY_i-x3r5KvDKm_agBrlvw/exec';
 // 22 nov 2026, 15:00 hrs, hora de Aguascalientes (UTC-6)
 const EVENT_DATE = new Date('2026-11-22T15:00:00-06:00');
 
