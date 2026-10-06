@@ -15,6 +15,7 @@
   --script:'Great Vibes',cursive; --serif:'Cormorant Garamond',Georgia,serif; --sans:'Montserrat',system-ui,sans-serif;
 }
 *{box-sizing:border-box;margin:0}
+[hidden]{display:none!important}
 html,body{min-height:100%}
 body{background:var(--cream);color:var(--ink);font-family:var(--sans);font-size:1rem;line-height:1.5;
   padding:max(1.25rem,env(safe-area-inset-top)) 1.25rem max(1.5rem,env(safe-area-inset-bottom));-webkit-font-smoothing:antialiased}
@@ -24,22 +25,28 @@ header{text-align:center}
 header .script{display:block;font-family:var(--script);font-size:2.8rem;line-height:1.1;color:var(--dusty)}
 header p{font-family:var(--serif);font-size:1.25rem;font-weight:600;color:var(--ink)}
 
-/* PIN */
-.pin{display:grid;gap:.35rem}
-.pin label{font-size:.85rem;font-weight:500;color:var(--dusty)}
-.pin input,.manual input{width:100%;padding:.8rem 1rem;border:1.5px solid var(--sea);border-radius:10px;background:#fffaf1;
-  font:inherit;font-size:1.1rem;color:var(--ink)}
-.pin input{letter-spacing:.3em}
+input,button{font:inherit}
 input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid var(--dusty);outline-offset:2px}
+.field{width:100%;padding:.8rem 1rem;border:1.5px solid var(--sea);border-radius:10px;background:#fffaf1;font-size:1.1rem;color:var(--ink)}
+.btn{padding:.85rem 1.4rem;border:0;border-radius:999px;background:var(--dusty);color:#fff;font-weight:500;cursor:pointer;transition:background .2s}
+.btn:hover{background:var(--ink)}
+.btn:disabled{opacity:.6;cursor:wait}
 
-/* cámara: marco en arco, igual que la portada de la invitación */
+/* ===== 1. pantalla de PIN ===== */
+#lock{display:grid;gap:1rem;margin-top:1.5rem;padding:1.6rem 1.3rem;background:#fffaf1;border:2px solid var(--sea);outline:1px solid var(--sea);outline-offset:6px;border-radius:18px;text-align:center}
+#lock h2{font-family:var(--serif);font-size:1.5rem;font-weight:600}
+#lock p.sub{font-size:.9rem;margin-top:-.6rem}
+#lock label{display:grid;gap:.35rem;text-align:left;font-size:.85rem;font-weight:500;color:var(--dusty)}
+#pin{text-align:center;letter-spacing:.4em}
+#lockMsg{min-height:1.3em;font-size:.9rem;color:var(--bad)}
+
+/* ===== 2. escáner ===== */
 .scan{position:relative;width:min(100%,340px);aspect-ratio:1;margin:0 auto;background:var(--mist);
   border:2px solid var(--sea);outline:1px solid var(--sea);outline-offset:6px;border-radius:999px 999px 18px 18px;overflow:hidden}
 #reader{width:100%;height:100%;border:0!important}
 #reader video{width:100%!important;height:100%!important;object-fit:cover}
-.scan .hint{position:absolute;inset:auto 0 1rem;text-align:center;font-size:.85rem;color:var(--ink);pointer-events:none}
+.hint{text-align:center;font-size:.85rem;color:var(--dusty)}
 
-/* resultado: lo importante a simple vista */
 #res{display:grid;justify-items:center;gap:.25rem;text-align:center;padding:1.4rem 1rem 1.5rem;border-radius:18px;
   background:var(--mist);color:var(--ink);border:1.5px solid var(--sea);min-height:11.5rem;align-content:center;transition:background .2s,color .2s}
 #res svg{width:46px;height:46px;margin-bottom:.2rem}
@@ -51,12 +58,11 @@ input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid
 #res.pop{animation:pop .28s ease-out}
 @keyframes pop{from{transform:scale(.97);opacity:.6}to{transform:none;opacity:1}}
 
-/* validar sin cámara */
 .manual summary{cursor:pointer;color:var(--dusty);font-size:.9rem;font-weight:500;text-align:center;padding:.4rem}
 .manual .row{display:flex;gap:.5rem;margin-top:.6rem}
-.manual input{text-transform:uppercase;letter-spacing:.08em}
-.manual button{flex:none;padding:0 1.2rem;border:0;border-radius:10px;background:var(--dusty);color:#fff;font:inherit;font-weight:500;cursor:pointer}
-.manual button:hover{background:var(--ink)}
+.manual .field{text-transform:uppercase;letter-spacing:.08em}
+.manual .btn{flex:none;padding:0 1.2rem;border-radius:10px}
+.exit{justify-self:center;background:none;border:0;color:var(--sea);font-size:.85rem;cursor:pointer;text-decoration:underline}
 
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
@@ -68,25 +74,32 @@ input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid
     <p>Control de acceso</p>
   </header>
 
-  <div class="pin">
-    <label for="pin">PIN del staff</label>
-    <input id="pin" type="password" inputmode="numeric" autocomplete="off" placeholder="••••">
-  </div>
+  <!-- 1. PIN -->
+  <form id="lock" novalidate>
+    <h2>Acceso del personal</h2>
+    <p class="sub">Escribe el PIN para activar el escáner.</p>
+    <label>PIN del staff
+      <input id="pin" class="field" type="password" inputmode="numeric" autocomplete="off" placeholder="••••"></label>
+    <p id="lockMsg" role="alert"></p>
+    <button id="lockBtn" class="btn" type="submit">Entrar</button>
+  </form>
 
-  <div class="scan">
-    <div id="reader"></div>
+  <!-- 2. Escáner (solo aparece con el PIN correcto) -->
+  <div id="app" hidden style="display:grid;gap:1.25rem">
+    <div class="scan"><div id="reader"></div></div>
     <p class="hint" id="hint">Apunta la cámara al QR del pase</p>
+
+    <section id="res" data-s="idle" role="status" aria-live="assertive"></section>
+
+    <details class="manual">
+      <summary>Validar escribiendo el código</summary>
+      <div class="row">
+        <input id="manual" class="field" type="text" placeholder="RO-XXXXXX" aria-label="Código del pase" autocapitalize="characters" autocomplete="off">
+        <button id="manualBtn" class="btn" type="button">Validar</button>
+      </div>
+    </details>
+    <button id="exitBtn" class="exit" type="button">Cerrar sesión</button>
   </div>
-
-  <section id="res" data-s="idle" role="status" aria-live="assertive"></section>
-
-  <details class="manual">
-    <summary>Validar escribiendo el código</summary>
-    <div class="row">
-      <input id="manual" type="text" placeholder="RO-XXXXXX" aria-label="Código del pase" autocapitalize="characters" autocomplete="off">
-      <button id="manualBtn" type="button">Validar</button>
-    </div>
-  </details>
 </main>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html5-qrcode/2.3.8/html5-qrcode.min.js"></script>
@@ -94,13 +107,67 @@ input:focus-visible,button:focus-visible,summary:focus-visible{outline:2px solid
 const URL_API = 'https://script.google.com/macros/s/AKfycbzZCH8U14MRa4vER-owVHN8S0RnAE5VszrfFZvlFjPZG6uCdWfhUOHxI1kFX86Nrnlj/exec';
 const $ = (id) => document.getElementById(id);
 const res = $('res');
-let busy = false;
+let busy = false, pinOk = '', scanner = null;
 
 const ICONS = {
   ok:   '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M15 25l6 6 12-13"/></svg>',
   bad:  '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="24" cy="24" r="20"/><path d="M17 17l14 14M31 17L17 31"/></svg>',
   idle: '<svg viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 17V8h9M33 8h9v9M42 31v9h-9M15 40H6v-9M16 24h16"/></svg>'
 };
+
+// Llamada al Apps Script (text/plain evita el preflight CORS)
+async function api(body) {
+  const r = await fetch(URL_API, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+/* ============ 1. VALIDAR EL PIN ============ */
+// Se manda un código inexistente: si el PIN es correcto el servidor responde
+// "Código no encontrado" (no marca nada); si no, responde "PIN incorrecto".
+$('lock').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const msg = $('lockMsg'), btn = $('lockBtn'), pin = $('pin').value.trim();
+  msg.textContent = '';
+  if (!pin) { msg.textContent = 'Escribe el PIN.'; return; }
+  btn.disabled = true; btn.textContent = 'Verificando…';
+  try {
+    const o = await api({ accion: 'validar', codigo: '__VERIFICAR_PIN__', pin });
+    const err = o.error || '';
+    if (err === 'PIN incorrecto') msg.textContent = 'PIN incorrecto. Inténtalo de nuevo.';
+    else if (/incompletos/i.test(err)) msg.textContent = 'El servidor usa una versión anterior del script. Redespliega con "Nueva versión".';
+    else { pinOk = pin; abrirEscaner(); }
+  } catch {
+    msg.textContent = 'Sin conexión. Revisa el internet e inténtalo de nuevo.';
+  }
+  btn.disabled = false; btn.textContent = 'Entrar';
+});
+
+/* ============ 2. ESCÁNER ============ */
+function abrirEscaner() {
+  $('lock').hidden = true;
+  $('app').hidden = false;
+  $('pin').value = '';
+  setState('idle', 'Listo para escanear', '', 'El resultado aparecerá aquí.');
+  scanner = new Html5Qrcode('reader');
+  scanner.start({ facingMode: 'environment' }, { fps: 10, qrbox: 220, aspectRatio: 1 }, onScan)
+    .catch(() => {
+      $('hint').hidden = true;
+      setState('bad', 'No se pudo abrir la cámara', '', 'Usa HTTPS, da permiso de cámara o valida escribiendo el código.');
+    });
+}
+
+$('exitBtn').addEventListener('click', async () => {
+  pinOk = '';
+  try { if (scanner) await scanner.stop(); } catch {}
+  scanner = null;
+  $('app').hidden = true;
+  $('lock').hidden = false;
+  $('pin').focus();
+});
 
 // Dibuja el resultado con textContent (los nombres vienen de la hoja, no se inserta HTML)
 function setState(s, title, name = '', detail = '') {
@@ -121,22 +188,16 @@ function fechaLegible(txt) {
 function rechazo(error) {
   const m = /^YA FUE USADO el (.+)$/i.exec(error || '');
   if (m) return setState('bad', 'Pase ya utilizado', '', 'Registrado el ' + fechaLegible(m[1]));
-  setState('bad', error === 'PIN incorrecto' ? 'PIN incorrecto' : 'Pase no válido', '', error === 'PIN incorrecto' ? 'Revisa el PIN e inténtalo de nuevo.' : (error || ''));
+  if (error === 'PIN incorrecto') return setState('bad', 'PIN incorrecto', '', 'Cierra sesión y vuelve a escribir el PIN.');
+  setState('bad', 'Pase no válido', '', error || '');
 }
 
 async function validar(codigo) {
   if (busy) return;
-  const pin = $('pin').value;
-  if (!pin) { setState('bad', 'Falta el PIN', '', 'Escribe el PIN del staff para validar.'); $('pin').focus(); return; }
   busy = true;
   setState('load', 'Validando…');
   try {
-    const r = await fetch(URL_API, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ accion: 'validar', codigo, pin })
-    });
-    const o = await r.json();
+    const o = await api({ accion: 'validar', codigo, pin: pinOk });
     if (o.ok) {
       setState('ok', 'Pase válido', o.nombre, o.pases + (Number(o.pases) === 1 ? ' pase' : ' pases'));
       navigator.vibrate && navigator.vibrate(80);
@@ -150,11 +211,21 @@ async function validar(codigo) {
   setTimeout(() => busy = false, 2500); // pausa antes del siguiente escaneo
 }
 
+// Acepta el QR de la invitación (BABYSHOWER-RO|código|...), un código suelto (RO-XXXXXX)
+// o un enlace con ?c=código
+function extraerCodigo(text) {
+  text = String(text).trim();
+  if (text.startsWith('BABYSHOWER-RO|')) return text.split('|')[1];
+  if (/^RO-[A-Z0-9]{4,}$/i.test(text)) return text.toUpperCase();
+  try { const c = new URL(text).searchParams.get('c'); if (c) return c; } catch {}
+  return null;
+}
+
 function onScan(text) {
   if (busy) return;
-  const parts = text.split('|');
-  if (parts[0] !== 'BABYSHOWER-RO') return setState('bad', 'QR no válido', '', 'Este código no es de la invitación.');
-  validar(parts[1]);
+  const codigo = extraerCodigo(text);
+  if (!codigo) return setState('bad', 'QR no válido', '', 'Este código no es de la invitación.');
+  validar(codigo);
 }
 
 $('manualBtn').addEventListener('click', () => {
@@ -162,15 +233,6 @@ $('manualBtn').addEventListener('click', () => {
   if (c) validar(c);
 });
 $('manual').addEventListener('keydown', (e) => { if (e.key === 'Enter') $('manualBtn').click(); });
-
-setState('idle', 'Listo para escanear', '', 'El resultado aparecerá aquí.');
-
-new Html5Qrcode('reader')
-  .start({ facingMode: 'environment' }, { fps: 10, qrbox: 220, aspectRatio: 1 }, onScan)
-  .catch(() => {
-    $('hint').hidden = true;
-    setState('bad', 'No se pudo abrir la cámara', '', 'Usa HTTPS, da permiso de cámara o valida escribiendo el código.');
-  });
 </script>
 </body>
 </html>
