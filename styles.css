@@ -19,6 +19,15 @@ body{background:var(--cream) url(fondo2.jfif) center top/cover fixed no-repeat}
 body::before{content:"";position:fixed;inset:0;z-index:0;pointer-events:none;background:radial-gradient(ellipse at 50% 40%,transparent 45%,rgba(221,205,189,.28) 100%)}
 @media (min-width:700px){body{background-size:auto 130vh;background-repeat:repeat-x;background-position:center top}}
 
+/* ===== fotos de ultrasonido ===== */
+.eco{display:grid;gap:1.4rem;justify-items:center}
+.eco figure{width:100%;padding:8px;background:#fffaf1;border:1.5px solid var(--sea);border-radius:12px;
+  box-shadow:0 0 0 5px var(--cream),0 10px 24px rgba(113,145,170,.25)}
+.eco figure:nth-child(1){transform:rotate(-1.2deg)}
+.eco figure:nth-child(2){transform:rotate(1.2deg)}
+.eco img{display:block;width:100%;height:auto;border-radius:6px}
+@media print{.eco{display:none}}
+
 /* ===== portada ===== */
 .cover{position:fixed;inset:0;z-index:10;display:grid;place-items:center;padding:1rem;transition:opacity 1s ease,visibility 1s}
 .cover.out{opacity:0;visibility:hidden}
